@@ -1,6 +1,5 @@
-# .github
 <p align="center">
-  <img src="https://storage.googleapis.com/tradable-app-public/assets/images/icons/tradable-logo-%5Bhollow%5D-512x512.png" alt="Tradable Logo" width="220" />
+  <img src="https://storage.googleapis.com/tradable-app-public/assets/images/icons/tradable-logo-[hollow]-512x512.png" alt="Tradable Logo" width="220" />
 </p>
 
 <h1 align="center">Tradable</h1>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://storage.googleapis.com/tradable-app-public/assets/images/icons/tradable-logo-[hollow]-512x512.png" alt="Tradable Logo" width="220" />
+  <img src="https://raw.githubusercontent.com/TradableApp/.github/main/profile/assets/tradable-logo.svg" alt="Tradable Logo" width="220" />
 </p>
 
 <h1 align="center">Tradable</h1>

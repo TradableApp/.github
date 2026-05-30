@@ -1,0 +1,7 @@
+{
+  "name": "Tradable CodeQL",
+  "description": "Standardized Tradable CodeQL scan (JS/TS): SHA-pinned, weekly schedule, uniform Analyze check name. Skips on private repos to avoid paid Code Security.",
+  "iconName": "shield-check",
+  "categories": ["Security", "Continuous integration"],
+  "filePatterns": ["package\\.json$"]
+}

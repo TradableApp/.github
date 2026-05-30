@@ -1,0 +1,7 @@
+{
+  "name": "Tradable CI (Bun)",
+  "description": "Standardized Tradable CI: Bun 1.3.14, SHA-pinned actions, job named CI, uniform phase names. Edit the Lint/Test/Build steps for your project.",
+  "iconName": "workflow",
+  "categories": ["Continuous integration"],
+  "filePatterns": ["package\\.json$", "bun\\.lock$"]
+}

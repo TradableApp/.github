@@ -10,12 +10,38 @@ Canonical house style for GitHub Actions across all `TradableApp` repositories. 
 |------|-------|
 | CI job id **and** name | `CI` (so the required status check is `CI` everywhere) |
 | CodeQL job name | `Analyze` — **no `strategy.matrix`** (matrix renames the check to `Analyze (javascript-typescript)`) |
-| Runtime | **Bun**, pinned: `bun-version: 1.3.14` |
+| Package manager | **Bun**, pinned: `bun-version: 1.3.14` |
+| Toolchain runtime | **Node**, pinned via `.nvmrc` (org standard: `24`). CI sets up Node *and* Bun. |
 | Install | `bun install --frozen-lockfile` (commit `bun.lock`; no `package-lock.json`/`yarn.lock`) |
 | Action pinning | Pin every `uses:` to a full **commit SHA** + trailing `# vX.Y.Z` comment. Never a bare tag. |
 | Least privilege | CI jobs declare `permissions: contents: read`. CodeQL declares `actions: read` + `contents: read` + `security-events: write`. |
 | Concurrency | Every workflow has a `concurrency` block keyed on `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true`. |
 | Triggers | `push` + `pull_request` on the default branch; CodeQL adds `schedule: cron '0 0 * * 0'`. |
+
+## Node + Bun together
+
+Bun is the package manager and script runner, but the JS toolchains (Hardhat, drizzle-kit, graph-cli, Vite) are Node programs — `bun run hardhat` executes `node_modules/.bin/hardhat`, whose `#!/usr/bin/env node` shebang runs it under the runner's **system Node**. Relying on `ubuntu-latest`'s default Node is non-deterministic (it drifts on image updates). So **CI sets up Node before Bun**, pinned via `.nvmrc`:
+
+```yaml
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+```
+
+- Every repo commits a `.nvmrc` (org standard `24`).
+- For submodule repos, the `setup-node` step goes **after** the submodule checkout, before `setup-bun`.
+- **CodeQL does NOT set up Node or Bun** — JS/TS extraction runs no build and installs no deps, so both are unnecessary there.
+
+## Package.json scripts
+
+Keep scripts runner-agnostic — no `npm`/`npx` baked in:
+- Compose sibling scripts with `bun run <script>` (not `npm run <script>`).
+- Invoke local bins bare (`hardhat run …`, not `npx hardhat run …`) — both Bun and npm put `node_modules/.bin` on PATH for scripts.
+- Don't declare `engines.npm` (the repo isn't installed with npm).
 
 ## Step / phase naming
 

@@ -55,4 +55,30 @@ CI **phases** differ by project type and that's fine — Solidity repos compile 
 
 ## Dependabot
 
-Every repo ships `.github/dependabot.yml` with the `github-actions` ecosystem (keeps pinned SHAs current) plus a `bun` ecosystem entry per directory that has its own `bun.lock`.
+Every repo ships `.github/dependabot.yml` with the `github-actions` ecosystem (keeps pinned SHAs current) plus the `bun` ecosystem covering **every** directory that has its own `bun.lock`. Conventions:
+
+- **Unquoted scalars** (`package-ecosystem: bun`, `directory: /`, `interval: weekly`) — no mixed single/double quoting.
+- **Multiple Bun lockfile dirs** use one entry with a `directories:` list (not repeated `directory:` entries).
+- **Commit message:** `commit-message: { prefix: chore, include: scope }` on every ecosystem → renders as `chore(deps): …`. Do **not** put the scope in the prefix (`prefix: chore(deps)` + `include: scope` doubles it to `chore(deps)(deps): …`).
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: bun
+    directories:
+      - /
+      - /path/to/nested/package
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+```

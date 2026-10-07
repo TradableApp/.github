@@ -1,0 +1,78 @@
+name: Notify e2e
+
+# The cross-repo leg of the Tier 1 smoke: a consumer merging to main asks sense-ai-e2e to run
+# the stack against the change.
+#
+# WHY THIS IS A REUSABLE WORKFLOW AND NOT A TEMPLATE
+#
+# It used to be an inline block copy-pasted into four ci.yml files. The copies had already
+# diverged in error-message accuracy, and a known-wrong 401 message sat unfixed because
+# correcting one string cost four PRs. workflow-templates/ cannot help: they are copy-on-create
+# and drift by design. A workflow_call keeps the logic in one file, so the next change to the
+# payload, the retry behaviour or the auth is one PR rather than four.
+#
+# WHY A GITHUB APP AND NOT A PAT
+#
+# This previously ran on a fine-grained PAT owned by one person, held as an org secret shared
+# with four repos. Fine-grained PATs expire within 366 days, and on expiry four repos fail at
+# once with a message that blames the selected-repositories list. It was also personal: the
+# holder losing org access, or regenerating the token, broke four repos. An App installation
+# token lives one hour, is minted per run, belongs to the org rather than a person, and carries
+# permissions anyone can audit in one place.
+
+on:
+  workflow_call:
+    inputs:
+      event-type:
+        description: The repository_dispatch event_type to send to sense-ai-e2e.
+        type: string
+        default: e2e-smoke
+    secrets:
+      app-id:
+        description: App ID of the Tradable e2e dispatch GitHub App.
+        required: true
+      app-private-key:
+        description: PEM private key for that App.
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Dispatch:
+    name: Dispatch
+    runs-on: ubuntu-latest
+    # Talks only to sense-ai-e2e, on a token minted from the App. Wants nothing from GITHUB_TOKEN.
+    permissions: {}
+    steps:
+      - name: Mint an installation token for sense-ai-e2e
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+          owner: ${{ github.repository_owner }}
+          # Scoped to the one repository this job may touch, so the token cannot be
+          # repurposed even within the App's own installation.
+          repositories: sense-ai-e2e
+
+      - name: Dispatch e2e smoke
+        env:
+          # Values reach the shell through env:, never interpolated into run: as an inline
+          # workflow expression. Neither is exploitable today, but the obvious extension —
+          # putting a commit message or branch name in the payload — would be.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          EVENT_TYPE: ${{ inputs.event-type }}
+        run: |
+          # A missing or malformed App credential fails loudly in the step above with its own
+          # message, so there is no empty-token case to defend here. That is the point: the
+          # inline version had to hand-detect an absent PAT because an empty Bearer token
+          # produced a 401 that read as a broken endpoint.
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY_OWNER}/sense-ai-e2e/dispatches" \
+            -d "$(jq -nc --arg t "$EVENT_TYPE" --arg s "$GITHUB_REPOSITORY" \
+                   '{event_type: $t, client_payload: {source: $s}}')"

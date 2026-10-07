@@ -35,9 +35,9 @@ on:
         description: PEM private key for that App.
         required: true
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# No `concurrency` block: in a called workflow `github.workflow` is the CALLER's workflow name,
+# so the house-style group resolves to the caller's own and GitHub cancels the run as a deadlock.
+# The caller's concurrency already covers this job.
 
 jobs:
   Dispatch:

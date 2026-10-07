@@ -15,7 +15,7 @@ Canonical house style for GitHub Actions across all `TradableApp` repositories. 
 | Install | `bun install --frozen-lockfile` (commit `bun.lock`; no `package-lock.json`/`yarn.lock`) |
 | Action pinning | Pin every `uses:` to a full **commit SHA** + trailing `# vX.Y.Z` comment. Never a bare tag. |
 | Least privilege | CI jobs declare `permissions: contents: read`. CodeQL declares `actions: read` + `contents: read` + `security-events: write`. |
-| Concurrency | Every workflow has a `concurrency` block keyed on `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true`. |
+| Concurrency | Every **top-level** workflow has a `concurrency` block keyed on `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true`. A reusable (`workflow_call`) workflow declares **none**: `github.workflow` there is the caller's name, so the group collides with the caller's own and the run is cancelled as a deadlock. |
 | Triggers | `push` + `pull_request` on the default branch; CodeQL adds `schedule: cron '0 0 * * 0'`. |
 
 ## Node + Bun together

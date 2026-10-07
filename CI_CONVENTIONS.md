@@ -85,18 +85,32 @@ This repo is public, so org repos can call these with no Actions-access configur
 |---|---|
 | `notify-e2e.yml` | Dispatch the Tier 1 e2e smoke to `sense-ai-e2e` on merge to `main`. |
 
-Calling it:
+Calling it — **pin the ref to a full commit SHA**, exactly as for any other `uses:`:
 
 ```yaml
   notify-e2e:
     name: Notify e2e
     needs: CI
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: TradableApp/.github/.github/workflows/notify-e2e.yml@main
+    uses: TradableApp/.github/.github/workflows/notify-e2e.yml@<40-char-sha> # v1
     secrets:
       app-id: ${{ secrets.E2E_DISPATCH_APP_ID }}
       app-private-key: ${{ secrets.E2E_DISPATCH_APP_PRIVATE_KEY }}
 ```
+
+`@main` is tempting here — it propagates a fix to every consumer with no follow-up — and it is
+wrong for the same reason a floating action tag is wrong, only worse. **Secrets passed to a
+reusable workflow are readable by that workflow.** A consumer pinned to `@main` hands its App
+private key to whatever `main` happens to contain at the moment the job runs, so a single bad
+or malicious commit here reaches every consumer's credentials at once. A SHA cannot be swapped
+under you; Dependabot's `github-actions` ecosystem bumps these refs like any other.
+
+The cost is real and accepted: changing the workflow is then one PR here plus one ref bump per
+consumer, rather than one PR total. Dependabot raises the bumps, and the alternative is making
+four repos' credentials depend on an unreviewed push.
+
+`main` in this repository must therefore be **branch-protected** (PR + review, no direct push).
+An unprotected branch holding reusable workflows is the whole blast radius in one place.
 
 A `uses:` job takes no `runs-on`, `steps` or `permissions` — those belong to the callee. The
 resulting check is named `<caller job name> / <callee job name>`, e.g. `Notify e2e / Dispatch`.

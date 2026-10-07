@@ -129,6 +129,15 @@ organisational work has two defects no amount of scoping fixes: fine-grained PAT
 within 366 days — taking every repo that shares them down at once, with an error that rarely
 names expiry as the cause — and they are tied to one person's continued org access.
 
+Apps are named `tradable-<purpose>` (kebab-case), described in two sentences — what it does,
+then the permission and the single repository it applies to — and point their homepage at the
+repository they act on rather than at the org. Existing Apps:
+
+| App | Does | Scope |
+|---|---|---|
+| `tradable-strategy-lab` | Commits the nightly ledger mirror from the Cloud Run Job | `Contents: write` on `Tradable` |
+| `tradable-e2e-dispatch` | Dispatches the Tier 1 e2e smoke on merge to `main` | `Contents: write` on `sense-ai-e2e` |
+
 An App installation token is minted per run by `actions/create-github-app-token`, lives one
 hour, belongs to the org, and carries permissions auditable in one place. Scope each mint with
 `owner:` + `repositories:` so the token cannot reach further than the job needs, even within

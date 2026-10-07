@@ -70,10 +70,53 @@ Bump via Dependabot (`github-actions` ecosystem, enabled in every repo). Keep th
 | `actions/checkout` | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` | v6.0.2 |
 | `oven-sh/setup-bun` | `0c5077e51419868618aeaa5fe8019c62421857d6` | v2.2.0 |
 | `github/codeql-action/*` | `03e4368ac7daa2bd82b3e85262f3bf87ee112f57` | v3 |
+| `actions/create-github-app-token` | `bcd2ba49218906704ab6c1aa796996da409d3eb1` | v3.2.0 |
+
+## Reusable workflows
+
+A job that exists in more than one repo belongs in `TradableApp/.github/.github/workflows/`
+as a `workflow_call` workflow, **not** in `workflow-templates/`. Templates are copy-on-create:
+they seed a new file and then drift, which is how four copies of the dispatch job ended up
+disagreeing about an error message that stayed wrong because fixing it cost four PRs.
+
+This repo is public, so org repos can call these with no Actions-access configuration.
+
+| Workflow | Purpose |
+|---|---|
+| `notify-e2e.yml` | Dispatch the Tier 1 e2e smoke to `sense-ai-e2e` on merge to `main`. |
+
+Calling it:
+
+```yaml
+  notify-e2e:
+    name: Notify e2e
+    needs: CI
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: TradableApp/.github/.github/workflows/notify-e2e.yml@main
+    secrets:
+      app-id: ${{ secrets.E2E_DISPATCH_APP_ID }}
+      app-private-key: ${{ secrets.E2E_DISPATCH_APP_PRIVATE_KEY }}
+```
+
+A `uses:` job takes no `runs-on`, `steps` or `permissions` — those belong to the callee. The
+resulting check is named `<caller job name> / <callee job name>`, e.g. `Notify e2e / Dispatch`.
+
+## Credentials: GitHub Apps, not personal PATs
+
+**Cross-repo automation authenticates as a GitHub App.** A personal access token doing
+organisational work has two defects no amount of scoping fixes: fine-grained PATs expire
+within 366 days — taking every repo that shares them down at once, with an error that rarely
+names expiry as the cause — and they are tied to one person's continued org access.
+
+An App installation token is minted per run by `actions/create-github-app-token`, lives one
+hour, belongs to the org, and carries permissions auditable in one place. Scope each mint with
+`owner:` + `repositories:` so the token cannot reach further than the job needs, even within
+the App's own installation. The App's private key is then the only long-lived credential, and
+it rotates on our schedule rather than GitHub's clock.
 
 ## Private cross-repo submodules
 
-Repos consuming the private `sense-ai-shared-schema` submodule (`tokenized-ai-agent`, `sense-ai-core`) can't fetch it with the default `GITHUB_TOKEN`. Resolve the pinned submodule SHA, then `actions/checkout` it explicitly into `packages/shared-schema`. The token is being migrated from the org `SUBMODULE_PAT` to per-repo read-only **deploy keys** (least privilege) — see the SenseAI E2E plan's hardening section.
+Repos consuming the private `sense-ai-shared-schema` submodule (`tokenized-ai-agent`, `sense-ai-core`) can't fetch it with the default `GITHUB_TOKEN`. Resolve the pinned submodule SHA, then `actions/checkout` it explicitly into `packages/shared-schema`. The token is being migrated off the org `SUBMODULE_PAT`, which is a personal PAT and carries the problems described above. Two candidates: per-repo read-only **deploy keys** (least privilege, but one key per consumer to manage) or the **same GitHub App** used for `notify-e2e`, extended with `contents: read` on `sense-ai-shared-schema` (one credential, central audit). Not yet decided — see the SenseAI E2E plan's hardening section.
 
 ## Per-project variation (allowed)
 

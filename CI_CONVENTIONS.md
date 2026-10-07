@@ -109,8 +109,15 @@ The cost is real and accepted: changing the workflow is then one PR here plus on
 consumer, rather than one PR total. Dependabot raises the bumps, and the alternative is making
 four repos' credentials depend on an unreviewed push.
 
-`main` in this repository must therefore be **branch-protected** (PR + review, no direct push).
-An unprotected branch holding reusable workflows is the whole blast radius in one place.
+`main` in this repository carries the org's standard `branch-protection` **ruleset** — PR with
+one approval, stale reviews dismissed on push, review threads resolved, linear history, no
+deletion, no force-push, and `bypass_actors: []` so admins are bound by it too. That is a
+precondition for anything here being callable, not an optional nicety: a branch holding
+reusable workflows is the whole blast radius in one place.
+
+Note for anyone auditing this: these repos use **rulesets**, not classic branch protection, so
+`gh api repos/<org>/<repo>/branches/main/protection` answers `404 Branch not protected` on a
+fully-protected branch. Check `gh api repos/<org>/<repo>/rulesets` instead.
 
 A `uses:` job takes no `runs-on`, `steps` or `permissions` — those belong to the callee. The
 resulting check is named `<caller job name> / <callee job name>`, e.g. `Notify e2e / Dispatch`.
